@@ -1,7 +1,7 @@
 Log4Slack
 =========
 
-Simple, asynchronous [Slack](https://slack.com/) log4net appender.
+Simple, asynchronous [Slack](https://slack.com/) log4net appender. Grab the NuGet package [here](https://www.nuget.org/packages/Log4Slack/).
 
 ![Example Log4Slack output](ExampleOutput.png)
 
