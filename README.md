@@ -3,6 +3,8 @@ Log4Slack
 
 Simple, asynchronous [Slack](https://slack.com/) log4net appender.
 
+![Example Log4Slack output](ExampleOutput.png)
+
 ```xml
 <appender name="SlackAppender" type="Log4Slack.SlackAppender, Log4Slack">
 	<WebhookUrl value="https://{your company}.slack.com/services/hooks/incoming-webhook?token={your token}" /> <!-- Your Slack webhook URL -->
