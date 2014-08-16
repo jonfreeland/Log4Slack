@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Log4Slack", "Log4Slack\Log4Slack.csproj", "{189AF12B-F742-42F4-95B9-88944AA64FDF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Log4SlackTesting", "Log4SlackTesting\Log4SlackTesting.csproj", "{3B464A67-C155-4041-BCDA-44F80CDD92DB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{189AF12B-F742-42F4-95B9-88944AA64FDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{189AF12B-F742-42F4-95B9-88944AA64FDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{189AF12B-F742-42F4-95B9-88944AA64FDF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B464A67-C155-4041-BCDA-44F80CDD92DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B464A67-C155-4041-BCDA-44F80CDD92DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B464A67-C155-4041-BCDA-44F80CDD92DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B464A67-C155-4041-BCDA-44F80CDD92DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
