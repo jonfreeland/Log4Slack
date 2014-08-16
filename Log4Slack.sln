@@ -9,6 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Log4SlackTesting", "Log4Sla
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FFF8AEED-C946-4645-8A87-98FB976538E1}"
 	ProjectSection(SolutionItems) = preProject
+		ExampleOutput.png = ExampleOutput.png
 		LICENSE.md = LICENSE.md
 		README.md = README.md
 	EndProjectSection
