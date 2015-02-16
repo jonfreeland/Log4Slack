@@ -1,7 +1,6 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Linq;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
@@ -12,10 +11,11 @@ namespace Log4Slack {
     /// </summary>
     public class SlackClient {
         private readonly Uri _uri;
-        private readonly Encoding _encoding = new UTF8Encoding();
+        private readonly Encoding _encoding = Encoding.UTF8;
         private readonly string _username;
         private readonly string _channel;
         private readonly string _iconUrl;
+        private readonly ArrayList _requests = ArrayList.Synchronized(new ArrayList(4));
 
         /// <summary>
         /// Creates a new instance of SlackClient.
@@ -31,6 +31,7 @@ namespace Log4Slack {
         /// <param name="urlWithAccessToken">The incoming webhook URL with token.</param>
         /// <param name="username">The username to post messages as.</param>
         /// <param name="channel">The channel to post messages to.</param>
+        /// <param name="iconUrl"></param>
         public SlackClient(string urlWithAccessToken, string username, string channel, string iconUrl = null) {
             _uri = new Uri(urlWithAccessToken);
             _username = username;
@@ -44,23 +45,13 @@ namespace Log4Slack {
         /// <param name="text">The text of the message.</param>
         /// <param name="username">If provided, overrides the existing username.</param>
         /// <param name="channel">If provided, overrides the existing channel.</param>
+        /// <param name="iconUrl"></param>
         /// <param name="attachments">Optional collection of attachments.</param>
-        public void PostMessage(string text, string username = null, string channel = null, string iconUrl = null, List<Attachment> attachments = null) {
+        public void PostMessageAsync(string text, string username = null, string channel = null, string iconUrl = null, List<Attachment> attachments = null) {
             var payload = BuildPayload(text, username, channel, iconUrl, attachments);
-            PostPayload(payload);
+            PostPayloadAsync(payload);
         }
 
-        /// <summary>
-        /// Post a message to Slack asynchronously.
-        /// </summary>
-        /// <param name="text">The text of the message.</param>
-        /// <param name="username">If provided, overrides the existing username.</param>
-        /// <param name="channel">If provided, overrides the existing channel.</param>
-        /// <param name="attachments">Optional collection of attachments.</param>
-        public void PostMessageAsync(string text, string username = null, string channel = null, string iconUrl = null, List<Attachment> attachments = null, UploadValuesCompletedEventHandler uploadValuesCompleted = null) {
-            var payload = BuildPayload(text, username, channel, iconUrl, attachments);
-            PostPayloadAsync(payload, uploadValuesCompleted);
-        }
 
         /// <summary>
         /// Builds a payload for Slack.
@@ -68,6 +59,7 @@ namespace Log4Slack {
         /// <param name="text"></param>
         /// <param name="username"></param>
         /// <param name="channel"></param>
+        /// <param name="iconUrl"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
         private Payload BuildPayload(string text, string username, string channel, string iconUrl, List<Attachment> attachments = null) {
@@ -89,45 +81,87 @@ namespace Log4Slack {
         /// <summary>
         /// Posts a payload to Slack.
         /// </summary>
-        private void PostPayload(Payload payload) {
-            using (var client = new WebClient()) {
-                var data = PrepareNameValueConnection(payload);
-                var response = client.UploadValues(_uri, "POST", data);
-                string responseText = _encoding.GetString(response); // the response text is usually "ok"
+        private void PostPayloadAsync(Payload payload) {
+            var data = JsonConvert.SerializeObject(payload);
+            PostPayloadAsync(data);
+        }
+
+        protected virtual void PostPayloadAsync(string json) {
+            HttpWebRequest request = null;
+
+            try {
+                request = (HttpWebRequest)WebRequest.Create(_uri);
+                request.Method = "POST";
+                request.ContentType = "application/x-www-form-urlencoded";
+
+                var encodedForm = string.Format("payload={0}", Uri.EscapeDataString(json));
+                var data = _encoding.GetBytes(encodedForm);
+                request.ContentLength = data.Length;
+
+                // Get the request stream into which the form data is to 
+                // be written. This is done asynchronously to free up this
+                // thread.
+                
+                // NOTE: We maintain a (possibly paranoid) list of 
+                // outstanding requests and add the request to it so that 
+                // it does not get treated as garbage by GC. In effect, 
+                // we are creating an explicit root. It is also possible
+                // for this module to get disposed before a request
+                // completes. During the callback, no other member should
+                // be touched except the requests list!
+
+                _requests.Add(request);
+
+                var ar = request.BeginGetRequestStream(OnGetRequestStreamCompleted, AsyncArgs(request, data));
+            }
+            catch (Exception localException) {
+                OnWebPostError(request, localException);
             }
         }
 
-        /// <summary>
-        /// Post a payload to Slack.
-        /// </summary>
-        private void PostPayloadAsync(Payload payload, UploadValuesCompletedEventHandler uploadValuesCompleted = null) {
-            using (var client = new WebClient()) {
-                var data = PrepareNameValueConnection(payload);
-                if (uploadValuesCompleted != null)
-                    client.UploadValuesCompleted += uploadValuesCompleted;
-                else
-                    client.UploadValuesCompleted += default_UploadValuesCompleted;
-                client.UploadValuesAsync(_uri, "POST", data);
+        private void OnWebPostError(WebRequest request, Exception e) {
+            if (request != null) _requests.Remove(request);
+        }
+
+        private static object[] AsyncArgs(params object[] args) {
+            return args;
+        }
+
+        private void OnGetRequestStreamCompleted(IAsyncResult ar) {
+            if (ar == null) throw new ArgumentNullException("ar");
+            var args = (object[])ar.AsyncState;
+            OnGetRequestStreamCompleted(ar, (WebRequest)args[0], (byte[])args[1]);
+        }
+
+        private void OnGetRequestStreamCompleted(IAsyncResult ar, WebRequest request, byte[] data)
+        {
+            try {
+                using (var output = request.EndGetRequestStream(ar)) {
+                    output.Write(data, 0, data.Length);
+                }
+                request.BeginGetResponse(OnGetResponseCompleted, request);
+            }
+            catch (Exception e) {
+                OnWebPostError(request, e);
             }
         }
 
-        private void default_UploadValuesCompleted(object sender, UploadValuesCompletedEventArgs e) {
-            // Just want to be able to break here for testing purposes
+        private void OnGetResponseCompleted(IAsyncResult ar) {
+            if (ar == null) throw new ArgumentNullException("ar");
+            OnGetResponseCompleted(ar, (WebRequest)ar.AsyncState);
         }
 
-        /// <summary>
-        /// Serializes the payload and adds it as a key to a NameValueCollection. 
-        /// </summary>
-        /// <param name="payload">The payload to serialize and add to the NameValueCollection.</param>
-        /// <returns></returns>
-        private NameValueCollection PrepareNameValueConnection(Payload payload) {
-            string payloadJson = JsonConvert.SerializeObject(payload);
-            var data = new NameValueCollection();
-            data["payload"] = payloadJson;
-            return data;
+        private void OnGetResponseCompleted(IAsyncResult ar, WebRequest request) {
+            try {
+                request.EndGetResponse(ar).Close(); // Not interested; assume OK
+                _requests.Remove(request);
+            }
+            catch (Exception e) {
+                OnWebPostError(request, e);
+            }
         }
-
     }
+
 
     /// <summary>
     /// The payload to send to Stack, which will be serialized to JSON before POSTing.
