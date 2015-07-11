@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
-using Newtonsoft.Json;
 
 namespace Log4Slack {
     /// <summary>
@@ -82,7 +84,7 @@ namespace Log4Slack {
         /// Posts a payload to Slack.
         /// </summary>
         private void PostPayloadAsync(Payload payload) {
-            var data = JsonConvert.SerializeObject(payload);
+            var data = JsonSerializeObject(payload);
             PostPayloadAsync(data);
         }
 
@@ -160,22 +162,32 @@ namespace Log4Slack {
                 OnWebPostError(request, e);
             }
         }
+
+        private static string JsonSerializeObject(object obj) {
+            var serializer = new DataContractJsonSerializer(obj.GetType());
+            using (var stream = new MemoryStream())
+            {
+                serializer.WriteObject(stream, obj);
+                return Encoding.UTF8.GetString(stream.ToArray());
+            }
+        }
     }
 
 
     /// <summary>
     /// The payload to send to Stack, which will be serialized to JSON before POSTing.
     /// </summary>
+    [DataContract]
     public class Payload {
-        [JsonProperty("channel")]
+        [DataMember(Name = "channel")]
         public string Channel { get; set; }
-        [JsonProperty("username")]
+        [DataMember(Name = "username")]
         public string Username { get; set; }
-        [JsonProperty("icon_url")]
+        [DataMember(Name = "icon_url")]
         public string IconUrl { get; set; }
-        [JsonProperty("text")]
+        [DataMember(Name = "text")]
         public string Text { get; set; }
-        [JsonProperty("attachments")]
+        [DataMember(Name = "attachments")]
         public List<Attachment> Attachments { get; set; }
     }
 
@@ -183,37 +195,38 @@ namespace Log4Slack {
     /// It is possible to create more richly-formatted messages using Attachments.
     /// https://api.slack.com/docs/attachments
     /// </summary>
+    [DataContract]
     public class Attachment {
         /// <summary>
         /// Required text summary of the attachment that is shown by clients that understand attachments but choose not to show them.
         /// </summary>
-        [JsonProperty("fallback")]
+        [DataMember(Name = "fallback")]
         public string Fallback { get; set; }
 
         /// <summary>
         /// Optional text that should appear above the formatted data.
         /// </summary>
-        [JsonProperty("pretext")]
+        [DataMember(Name = "pretext")]
         public string PreText { get; set; }
 
         /// <summary>
         /// Optional text that should appear within the attachment.
         /// </summary>
-        [JsonProperty("text")]
+        [DataMember(Name = "text")]
         public string Text { get; set; }
 
         /// <summary>
         /// Can either be one of 'good', 'warning', 'danger', or any hex color code.
         /// </summary>
-        [JsonProperty("color")]
+        [DataMember(Name = "color")]
         public string Color { get; set; }
 
         /// <summary>
         /// Fields are displayed in a table on the message.
         /// </summary>
-        [JsonProperty("fields")]
+        [DataMember(Name = "fields")]
         public List<Field> Fields { get; set; }
-        [JsonProperty("mrkdwn_in")]
+        [DataMember(Name = "mrkdwn_in")]
         public List<string> MarkdownIn { get; private set; }
 
         public Attachment(string fallback) {
@@ -225,21 +238,22 @@ namespace Log4Slack {
     /// <summary>
     /// Fields are displayed in a table on the message.
     /// </summary>
+    [DataContract]
     public class Field {
         /// <summary>
         /// The title may not contain markup and will be escaped for you; required.
         /// </summary>
-        [JsonProperty("title")]
+        [DataMember(Name = "title")]
         public string Title { get; set; }
         /// <summary>
         /// Text value of the field. May contain standard message markup and must be escaped as normal; may be multi-line.
         /// </summary>
-        [JsonProperty("value")]
+        [DataMember(Name = "value")]
         public string Value { get; set; }
         /// <summary>
         /// Optional flag indicating whether the <paramref name="Value"/> is short enough to be displayed side-by-side with other values.
         /// </summary>
-        [JsonProperty("short")]
+        [DataMember(Name = "short")]
         public bool Short { get; set; }
 
         public Field(string title) {
@@ -247,5 +261,3 @@ namespace Log4Slack {
         }
     }
 }
-
-
