@@ -8,13 +8,12 @@
     <owners>Jonathan Freeland</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Simple, asynchronous Slack log4net appender.</description>
-    <copyright>Copyright © 2014 Jonathan Freeland</copyright>
+    <copyright>Copyright © 2015 Jonathan Freeland</copyright>
 	<tags>slack log4net appender</tags>
 	<language>en-us</language>
 	<projectUrl>https://github.com/jonfreeland/Log4Slack</projectUrl>
     <dependencies>
       <dependency id="log4net" version="2.0.3" />
-      <dependency id="Newtonsoft.Json" version="6.0.4" />
     </dependencies>
   </metadata>
 </package>
