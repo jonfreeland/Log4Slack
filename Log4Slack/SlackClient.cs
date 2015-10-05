@@ -17,6 +17,7 @@ namespace Log4Slack {
         private readonly string _username;
         private readonly string _channel;
         private readonly string _iconUrl;
+        private readonly string _iconEmoji;
         private readonly ArrayList _requests = ArrayList.Synchronized(new ArrayList(4));
 
         /// <summary>
@@ -33,12 +34,14 @@ namespace Log4Slack {
         /// <param name="urlWithAccessToken">The incoming webhook URL with token.</param>
         /// <param name="username">The username to post messages as.</param>
         /// <param name="channel">The channel to post messages to.</param>
-        /// <param name="iconUrl"></param>
-        public SlackClient(string urlWithAccessToken, string username, string channel, string iconUrl = null) {
+        /// <param name="iconUrl">The URL of an image icon for post</param>
+        /// <param name="iconEmoji">The Emoji icon for post</param>
+        public SlackClient(string urlWithAccessToken, string username, string channel, string iconUrl = null, string iconEmoji = null) {
             _uri = new Uri(urlWithAccessToken);
             _username = username;
             _channel = channel;
             _iconUrl = iconUrl;
+            _iconEmoji = iconEmoji;
         }
 
         /// <summary>
@@ -48,9 +51,10 @@ namespace Log4Slack {
         /// <param name="username">If provided, overrides the existing username.</param>
         /// <param name="channel">If provided, overrides the existing channel.</param>
         /// <param name="iconUrl"></param>
+        /// <param name="iconEmoji"></param>
         /// <param name="attachments">Optional collection of attachments.</param>
-        public void PostMessageAsync(string text, string username = null, string channel = null, string iconUrl = null, List<Attachment> attachments = null) {
-            var payload = BuildPayload(text, username, channel, iconUrl, attachments);
+        public void PostMessageAsync(string text, string username = null, string channel = null, string iconUrl = null, string iconEmoji = null, List<Attachment> attachments = null) {
+            var payload = BuildPayload(text, username, channel, iconUrl, iconEmoji, attachments);
             PostPayloadAsync(payload);
         }
 
@@ -62,17 +66,20 @@ namespace Log4Slack {
         /// <param name="username"></param>
         /// <param name="channel"></param>
         /// <param name="iconUrl"></param>
+        /// <param name="iconEmoji"></param>
         /// <param name="attachments"></param>
         /// <returns></returns>
-        private Payload BuildPayload(string text, string username, string channel, string iconUrl, List<Attachment> attachments = null) {
+        private Payload BuildPayload(string text, string username, string channel, string iconUrl, string iconEmoji, List<Attachment> attachments = null) {
             username = string.IsNullOrEmpty(username) ? _username : username;
             channel = string.IsNullOrEmpty(channel) ? _channel : channel;
             iconUrl = string.IsNullOrEmpty(channel) ? _iconUrl : iconUrl;
+            iconEmoji = string.IsNullOrEmpty(iconEmoji) ? _iconEmoji : iconEmoji;
 
             var payload = new Payload {
                 Channel = channel,
                 Username = username,
                 IconUrl = iconUrl,
+                IconEmoji = iconEmoji,
                 Text = text,
                 Attachments = attachments
             };
@@ -185,6 +192,8 @@ namespace Log4Slack {
         public string Username { get; set; }
         [DataMember(Name = "icon_url")]
         public string IconUrl { get; set; }
+        [DataMember(Name = "icon_emoji")]
+        public string IconEmoji { get; set; }
         [DataMember(Name = "text")]
         public string Text { get; set; }
         [DataMember(Name = "attachments")]
