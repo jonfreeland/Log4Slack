@@ -11,6 +11,7 @@ Simple, asynchronous [Slack](https://slack.com/) log4net appender. Grab the NuGe
 	<Channel value="#testing" /> <!-- Your Slack channel to post to -->
 	<Username value="Log4Slack" /> <!-- The username to post as -->
 	<IconUrl value="{your icon url}" />
+	<IconEmoji value=":ghost:" /> <!-- Include an emoji to add a little chacter to your message -->
 	<AddAttachment value="true" /> <!-- Include an attachment on the Slack message with additional details -->
 	<AddExceptionTraceField value="true" /> <!-- If an exception occurs, add its trace as a field on the message attachment -->
 	<UsernameAppendLoggerName value="true"/> <!-- Append the current logger name to the Slack username -->
