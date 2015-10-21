@@ -34,6 +34,11 @@ namespace Log4Slack {
         public string IconUrl { get; set; }
 
         /// <summary>
+        /// The name of the Emoji icon to use, if any.
+        /// </summary>
+        public string IconEmoji { get; set; }
+
+        /// <summary>
         /// Indicates whether or not to include additional details in message attachments.
         /// </summary>
         public bool AddAttachment { get; set; }
@@ -94,7 +99,7 @@ namespace Log4Slack {
             if (UsernameAppendLoggerName)
                 username += " - " + loggingEvent.LoggerName;
 
-            slackClient.PostMessageAsync(message, username, Channel, IconUrl, attachments);
+            slackClient.PostMessageAsync(message, username, Channel, IconUrl, IconEmoji, attachments);
         }
     }
 }
