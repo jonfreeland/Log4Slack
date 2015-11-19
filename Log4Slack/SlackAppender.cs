@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using log4net.Appender;
 
 namespace Log4Slack {
@@ -94,7 +95,17 @@ namespace Log4Slack {
                 attachments.Add(theAttachment);
             }
 
-            var message = string.Format("[{0}] {1}", loggingEvent.Level.DisplayName.ToLowerInvariant(), loggingEvent.RenderedMessage);
+            String formattedMessage = loggingEvent.RenderedMessage;
+            if (Layout != null)
+            {
+                using(StringWriter writer = new StringWriter())
+                {
+                    Layout.Format(writer, loggingEvent);
+                    formattedMessage = writer.ToString();
+                }
+            }
+
+            var message = string.Format("[{0}] {1}", loggingEvent.Level.DisplayName.ToLowerInvariant(), formattedMessage);
             var username = Username;
             if (UsernameAppendLoggerName)
                 username += " - " + loggingEvent.LoggerName;
