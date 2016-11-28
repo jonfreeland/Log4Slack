@@ -104,13 +104,12 @@ namespace Log4Slack {
                     formattedMessage = writer.ToString();
                 }
             }
-
-            var message = string.Format("[{0}] {1}", loggingEvent.Level.DisplayName.ToLowerInvariant(), formattedMessage);
+            
             var username = Username;
             if (UsernameAppendLoggerName)
                 username += " - " + loggingEvent.LoggerName;
 
-            slackClient.PostMessageAsync(message, username, Channel, IconUrl, IconEmoji, attachments);
+            slackClient.PostMessageAsync(formattedMessage, username, Channel, IconUrl, IconEmoji, attachments);
         }
     }
 }
