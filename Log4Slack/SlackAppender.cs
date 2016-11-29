@@ -57,7 +57,7 @@ namespace Log4Slack {
 
         protected override void Append(log4net.Core.LoggingEvent loggingEvent) {
             // Initialze the Slack client
-            var slackClient = new SlackClient(WebhookUrl);
+            var slackClient = new SlackClient(WebhookUrl.Expand());
             var attachments = new List<Attachment>();
 
             if (AddAttachment) {
@@ -81,7 +81,7 @@ namespace Log4Slack {
                     new Field("Machine") {Value = Environment.MachineName, Short = true}
                 };
                 if (!UsernameAppendLoggerName)
-                    theAttachment.Fields.Insert(0, new Field("Logger") {Value = loggingEvent.LoggerName, Short = true});
+                    theAttachment.Fields.Insert(0, new Field("Logger") { Value = loggingEvent.LoggerName, Short = true });
 
                 // Add exception fields if exception occurred
                 var exception = loggingEvent.ExceptionObject;
@@ -98,18 +98,26 @@ namespace Log4Slack {
             String formattedMessage = loggingEvent.RenderedMessage;
             if (Layout != null)
             {
-                using(StringWriter writer = new StringWriter())
+                using (StringWriter writer = new StringWriter())
                 {
                     Layout.Format(writer, loggingEvent);
                     formattedMessage = writer.ToString();
                 }
             }
-            
-            var username = Username;
+
+            var username = Username.Expand();
             if (UsernameAppendLoggerName)
                 username += " - " + loggingEvent.LoggerName;
 
-            slackClient.PostMessageAsync(formattedMessage, username, Channel, IconUrl, IconEmoji, attachments);
+            slackClient.PostMessageAsync(formattedMessage, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments);
+        }
+    }
+
+    internal static class Extensions
+    {
+        public static string Expand(this string text)
+        {
+            return text != null ? Environment.ExpandEnvironmentVariables(text) : null;
         }
     }
 }
