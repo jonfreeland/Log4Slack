@@ -72,7 +72,7 @@ namespace Log4Slack {
         private Payload BuildPayload(string text, string username, string channel, string iconUrl, string iconEmoji, List<Attachment> attachments = null) {
             username = string.IsNullOrEmpty(username) ? _username : username;
             channel = string.IsNullOrEmpty(channel) ? _channel : channel;
-            iconUrl = string.IsNullOrEmpty(channel) ? _iconUrl : iconUrl;
+            iconUrl = string.IsNullOrEmpty(iconUrl) ? _iconUrl : iconUrl;
             iconEmoji = string.IsNullOrEmpty(iconEmoji) ? _iconEmoji : iconEmoji;
 
             var payload = new Payload {
