@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using log4net.Appender;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Log4Slack {
     public class SlackAppender : AppenderSkeleton {
@@ -57,7 +59,7 @@ namespace Log4Slack {
 
         protected override void Append(log4net.Core.LoggingEvent loggingEvent) {
             // Initialze the Slack client
-            var slackClient = new SlackClient(WebhookUrl);
+            var slackClient = new SlackClient(WebhookUrl.Expand());
             var attachments = new List<Attachment>();
 
             if (AddAttachment) {
@@ -77,39 +79,52 @@ namespace Log4Slack {
 
                 // Add attachment fields
                 theAttachment.Fields = new List<Field> {
-                    new Field("Process") {Value = _currentProcess.ProcessName, Short = true},
-                    new Field("Machine") {Value = Environment.MachineName, Short = true}
+                    new Field("Process", Value: _currentProcess.ProcessName, Short: true),
+                    new Field("Machine", Value: Environment.MachineName, Short: true)
                 };
                 if (!UsernameAppendLoggerName)
-                    theAttachment.Fields.Insert(0, new Field("Logger") {Value = loggingEvent.LoggerName, Short = true});
+                    theAttachment.Fields.Insert(0, new Field("Logger", Value: loggingEvent.LoggerName, Short: true));
 
                 // Add exception fields if exception occurred
                 var exception = loggingEvent.ExceptionObject;
                 if (exception != null) {
-                    if (AddExceptionTraceField && !string.IsNullOrWhiteSpace(exception.StackTrace))
-                        theAttachment.Fields.Insert(0, new Field("Exception Trace") { Value = "```" + exception.StackTrace + "```" });
-                    theAttachment.Fields.Insert(0, new Field("Exception Type") { Value = exception.GetType().Name, Short = true });
-                    theAttachment.Fields.Insert(0, new Field("Exception Message") { Value = exception.Message, Short = true });
+                    theAttachment.Fields.Insert(0, new Field("Exception Type", Value: exception.GetType().Name, Short: true));
+                    if (AddExceptionTraceField && !string.IsNullOrWhiteSpace(exception.StackTrace)) {
+                        var parts = exception.StackTrace.SplitOn(1990).ToArray(); // Split call stack into consecutive fields of ~2k characters
+                        for (int idx = parts.Length - 1; idx >= 0; idx--) {
+                            var name = "Exception Trace" + (idx > 0 ? string.Format(" {0}", idx + 1) : null);
+                            theAttachment.Fields.Insert(0, new Field(name, Value: "```" + parts[idx].Replace("```", "'''") + "```"));
+                        }
+                    }
+
+                    theAttachment.Fields.Insert(0, new Field("Exception Message", Value: exception.Message));
                 }
 
                 attachments.Add(theAttachment);
             }
 
-            String formattedMessage = loggingEvent.RenderedMessage;
-            if (Layout != null)
-            {
-                using(StringWriter writer = new StringWriter())
-                {
-                    Layout.Format(writer, loggingEvent);
-                    formattedMessage = writer.ToString();
-                }
-            }
-            
-            var username = Username;
-            if (UsernameAppendLoggerName)
-                username += " - " + loggingEvent.LoggerName;
-
-            slackClient.PostMessageAsync(formattedMessage, username, Channel, IconUrl, IconEmoji, attachments);
+            var formattedMessage = (Layout != null ? Layout.FormatString(loggingEvent) : loggingEvent.RenderedMessage);
+            var username = Username.Expand() + (UsernameAppendLoggerName ? " - " + loggingEvent.LoggerName : null);
+            slackClient.PostMessageAsync(formattedMessage, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments);
         }
+    }
+
+    internal static class Extensions {
+        public static string Expand(this string text) {
+            return text != null ? Environment.ExpandEnvironmentVariables(text) : null;
+        }
+
+        public static IEnumerable<string> SplitOn(this string text, int numChars) {
+            var SplitOnPattern = new Regex(string.Format(@"(?<line>.{{1,{0}}})([\r\n]|$)", numChars), RegexOptions.Singleline | RegexOptions.IgnoreCase);
+            return SplitOnPattern.Matches(text).OfType<Match>().Select(m => m.Groups["line"].Value);
+        }
+
+        public static string FormatString(this log4net.Layout.ILayout layout, log4net.Core.LoggingEvent loggingEvent) {
+            using (var writer = new StringWriter()) {
+                layout.Format(writer, loggingEvent);
+                return writer.ToString();
+            }
+        }
+
     }
 }

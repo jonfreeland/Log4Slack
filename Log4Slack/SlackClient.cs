@@ -235,6 +235,7 @@ namespace Log4Slack {
         /// </summary>
         [DataMember(Name = "fields")]
         public List<Field> Fields { get; set; }
+
         [DataMember(Name = "mrkdwn_in")]
         public List<string> MarkdownIn { get; private set; }
 
@@ -265,8 +266,10 @@ namespace Log4Slack {
         [DataMember(Name = "short")]
         public bool Short { get; set; }
 
-        public Field(string title) {
-            Title = title;
+        public Field(string Title, string Value = null, bool Short = false) {
+            this.Title = Title;
+            this.Value = Value;
+            this.Short = Short;
         }
     }
 }
