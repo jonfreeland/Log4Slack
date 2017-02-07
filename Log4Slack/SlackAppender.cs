@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using log4net.Appender;
 using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Log4Slack {
-    public class SlackAppender : log4net.Appender.AppenderSkeleton {
+    public class SlackAppender : AppenderSkeleton {
         private readonly Process _currentProcess = Process.GetCurrentProcess();
 
         /// <summary>
@@ -63,8 +64,7 @@ namespace Log4Slack {
 
             if (AddAttachment) {
                 // Set fallback string
-                var theAttachment = new Attachment(string.Format("[{0}] {1} in {2} on {3}", loggingEvent.Level.DisplayName, 
-                    loggingEvent.LoggerName, _currentProcess.ProcessName, Environment.MachineName));
+                var theAttachment = new Attachment(string.Format("[{0}] {1} in {2} on {3}", loggingEvent.Level.DisplayName, loggingEvent.LoggerName, _currentProcess.ProcessName, Environment.MachineName));
 
                 // Determine attachment color
                 switch (loggingEvent.Level.DisplayName.ToLowerInvariant()) {
@@ -90,12 +90,13 @@ namespace Log4Slack {
                 if (exception != null) {
                     theAttachment.Fields.Insert(0, new Field("Exception Type", Value: exception.GetType().Name, Short: true));
                     if (AddExceptionTraceField && !string.IsNullOrWhiteSpace(exception.StackTrace)) {
-                        var parts = exception.StackTrace.SplitOn(1990).ToArray();
-                        for(int idx = parts.Length - 1; idx >= 0; idx--) {
+                        var parts = exception.StackTrace.SplitOn(1990).ToArray(); // Split call stack into consecutive fields of ~2k characters
+                        for (int idx = parts.Length - 1; idx >= 0; idx--) {
                             var name = "Exception Trace" + (idx > 0 ? string.Format(" {0}", idx + 1) : null);
                             theAttachment.Fields.Insert(0, new Field(name, Value: "```" + parts[idx].Replace("```", "'''") + "```"));
                         }
                     }
+
                     theAttachment.Fields.Insert(0, new Field("Exception Message", Value: exception.Message));
                 }
 
@@ -108,21 +109,17 @@ namespace Log4Slack {
         }
     }
 
-    internal static class Extensions
-    {
-        public static string Expand(this string text)
-        {
+    internal static class Extensions {
+        public static string Expand(this string text) {
             return text != null ? Environment.ExpandEnvironmentVariables(text) : null;
         }
 
-        public static IEnumerable<string> SplitOn(this string text, int numChars)
-        {
+        public static IEnumerable<string> SplitOn(this string text, int numChars) {
             var SplitOnPattern = new Regex(string.Format(@"(?<line>.{{1,{0}}})([\r\n]|$)", numChars), RegexOptions.Singleline | RegexOptions.IgnoreCase);
             return SplitOnPattern.Matches(text).OfType<Match>().Select(m => m.Groups["line"].Value);
         }
 
-        public static string FormatString(this log4net.Layout.ILayout layout, log4net.Core.LoggingEvent loggingEvent)
-        {
+        public static string FormatString(this log4net.Layout.ILayout layout, log4net.Core.LoggingEvent loggingEvent) {
             using (var writer = new StringWriter()) {
                 layout.Format(writer, loggingEvent);
                 return writer.ToString();
