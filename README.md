@@ -1,6 +1,5 @@
 Log4Slack
 =========
-![Build status](https://21cf.visualstudio.com/_apis/public/build/definitions/dd21e5ce-6952-4a4a-9499-6025772cd9a2/56/badge)
 
 Simple, asynchronous [Slack](https://slack.com/) log4net appender. Grab the NuGet package [here](https://www.nuget.org/packages/Log4Slack/).
 
