@@ -5,10 +5,20 @@ using System.IO;
 using log4net.Appender;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Drawing;
 
 namespace Log4Slack {
+
+    public class Mapping
+    {
+        public string level { get; set; }
+        public string foreColor { get; set; }
+        public string backColor { get; set; }
+    }
+
     public class SlackAppender : AppenderSkeleton {
         private readonly Process _currentProcess = Process.GetCurrentProcess();
+        private List<Mapping> Mappings = new List<Mapping>();
 
         /// <summary>
         /// Slack token.
@@ -57,6 +67,13 @@ namespace Log4Slack {
         /// </summary>
         public bool UsernameAppendLoggerName { get; set; }
 
+        /// <summary>
+        /// Whether to tell Slack API to automatically link @mentions
+        /// </summary>
+        public bool LinkNames { get; set; }
+
+        public Mapping mapping { set { Mappings.Add(value); } }
+
         protected override void Append(log4net.Core.LoggingEvent loggingEvent) {
             // Initialze the Slack client
             var slackClient = new SlackClient(WebhookUrl.Expand());
@@ -75,6 +92,15 @@ namespace Log4Slack {
                     case "fatal":
                         theAttachment.Color = "danger";
                         break;
+                }
+
+                //override colors from config if available
+                var mapping = Mappings != null ? Mappings.FirstOrDefault(m => m.level.Equals(loggingEvent.Level.DisplayName,StringComparison.InvariantCultureIgnoreCase)) : null;
+                if (mapping != null)
+                {
+                    var color = Color.FromName(mapping.backColor);
+                    var hex = color.IsKnownColor ? String.Format("#{0:X2}{1:X2}{2:X2}", color.R, color.G, color.B) : mapping.backColor;
+                    theAttachment.Color = !string.IsNullOrEmpty(hex) ? hex : theAttachment.Color;
                 }
 
                 // Add attachment fields
@@ -105,7 +131,7 @@ namespace Log4Slack {
 
             var formattedMessage = (Layout != null ? Layout.FormatString(loggingEvent) : loggingEvent.RenderedMessage);
             var username = Username.Expand() + (UsernameAppendLoggerName ? " - " + loggingEvent.LoggerName : null);
-            slackClient.PostMessageAsync(formattedMessage, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments);
+            slackClient.PostMessageAsync(formattedMessage, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments, LinkNames);
         }
     }
 
