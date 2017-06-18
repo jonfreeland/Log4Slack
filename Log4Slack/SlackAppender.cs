@@ -57,6 +57,11 @@ namespace Log4Slack {
         /// </summary>
         public bool UsernameAppendLoggerName { get; set; }
 
+        /// <summary>
+        /// The optional proxy configuration for outgoing slack posts
+        /// </summary>
+        public string Proxy { get; set; }
+
         protected override void Append(log4net.Core.LoggingEvent loggingEvent) {
             // Initialze the Slack client
             var slackClient = new SlackClient(WebhookUrl.Expand());
@@ -105,7 +110,7 @@ namespace Log4Slack {
 
             var formattedMessage = (Layout != null ? Layout.FormatString(loggingEvent) : loggingEvent.RenderedMessage);
             var username = Username.Expand() + (UsernameAppendLoggerName ? " - " + loggingEvent.LoggerName : null);
-            slackClient.PostMessageAsync(formattedMessage, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments);
+            slackClient.PostMessageAsync(formattedMessage, Proxy, username, Channel.Expand(), IconUrl.Expand(), IconEmoji.Expand(), attachments);
         }
     }
 

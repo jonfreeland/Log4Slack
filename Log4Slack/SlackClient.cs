@@ -48,14 +48,15 @@ namespace Log4Slack {
         /// Post a message to Slack.
         /// </summary>
         /// <param name="text">The text of the message.</param>
+        /// <param name="proxyAddress">If provided, uses this proxy address which posting payloads</param>
         /// <param name="username">If provided, overrides the existing username.</param>
         /// <param name="channel">If provided, overrides the existing channel.</param>
         /// <param name="iconUrl"></param>
         /// <param name="iconEmoji"></param>
         /// <param name="attachments">Optional collection of attachments.</param>
-        public void PostMessageAsync(string text, string username = null, string channel = null, string iconUrl = null, string iconEmoji = null, List<Attachment> attachments = null) {
+        public void PostMessageAsync(string text, string proxyAddress, string username = null, string channel = null, string iconUrl = null, string iconEmoji = null, List<Attachment> attachments = null) {
             var payload = BuildPayload(text, username, channel, iconUrl, iconEmoji, attachments);
-            PostPayloadAsync(payload);
+            PostPayloadAsync(payload, proxyAddress);
         }
 
 
@@ -90,18 +91,24 @@ namespace Log4Slack {
         /// <summary>
         /// Posts a payload to Slack.
         /// </summary>
-        private void PostPayloadAsync(Payload payload) {
+        private void PostPayloadAsync(Payload payload, string proxyAddress) {
             var data = JsonSerializeObject(payload);
-            PostPayloadAsync(data);
+            PostPayloadAsync(data, proxyAddress);
         }
 
-        protected virtual void PostPayloadAsync(string json) {
+        protected virtual void PostPayloadAsync(string json, string proxyAddress) {
             HttpWebRequest request = null;
 
             try {
                 request = (HttpWebRequest)WebRequest.Create(_uri);
                 request.Method = "POST";
                 request.ContentType = "application/x-www-form-urlencoded";
+
+                if (!string.IsNullOrEmpty(proxyAddress))
+                {
+                    Uri uri = new Uri(proxyAddress);
+                    request.Proxy = new WebProxy(uri);
+                }
 
                 var encodedForm = string.Format("payload={0}", Uri.EscapeDataString(json));
                 var data = _encoding.GetBytes(encodedForm);
